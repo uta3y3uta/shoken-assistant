@@ -79,8 +79,38 @@ function refreshProviderUI() {
   modelSelect.value = localStorage.getItem(getModelLSKey(provider)) || cfg.defaultModel;
 }
 
+// 旧バージョンからのデータ移行
+function migrateLegacy() {
+  const oldKey = localStorage.getItem("shoken_api_key");
+  if (oldKey) {
+    if (oldKey.startsWith("AIza")) {
+      if (!localStorage.getItem(LS.apiKeyGoogle)) {
+        localStorage.setItem(LS.apiKeyGoogle, oldKey);
+      }
+      if (!localStorage.getItem(LS.provider)) {
+        localStorage.setItem(LS.provider, "google");
+      }
+    } else {
+      if (!localStorage.getItem(LS.apiKeyAnthropic)) {
+        localStorage.setItem(LS.apiKeyAnthropic, oldKey);
+      }
+    }
+    localStorage.removeItem("shoken_api_key");
+  }
+  const oldModel = localStorage.getItem("shoken_model");
+  if (oldModel) {
+    if (oldModel.startsWith("gemini")) {
+      if (!localStorage.getItem(LS.modelGoogle)) localStorage.setItem(LS.modelGoogle, oldModel);
+    } else {
+      if (!localStorage.getItem(LS.modelAnthropic)) localStorage.setItem(LS.modelAnthropic, oldModel);
+    }
+    localStorage.removeItem("shoken_model");
+  }
+}
+
 // 設定の読み込み
 function loadSettings() {
+  migrateLegacy();
   providerSelect.value = localStorage.getItem(LS.provider) || "anthropic";
   gradeSelect.value = localStorage.getItem(LS.grade) || "5";
   termSelect.value = localStorage.getItem(LS.term) || "後期";
@@ -133,6 +163,15 @@ generateBtn.addEventListener("click", async () => {
 
   if (!apiKey) {
     showError(`${PROVIDERS[provider].keyLabel}を「API設定」から入力してください。`);
+    return;
+  }
+  // キー形式と選択プロバイダのミスマッチをチェック
+  if (provider === "anthropic" && apiKey.startsWith("AIza")) {
+    showError("Anthropicが選択されていますが，Google AI StudioのAPIキー（AIza...）が入力されています。プロバイダを「Google（Gemini）」に切り替えてください。");
+    return;
+  }
+  if (provider === "google" && apiKey.startsWith("sk-ant-")) {
+    showError("Googleが選択されていますが，AnthropicのAPIキー（sk-ant-...）が入力されています。プロバイダを「Anthropic」に切り替えてください。");
     return;
   }
   if (!text) {
