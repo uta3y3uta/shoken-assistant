@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>通知表所見文例アプリ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>通知表 所見アシスタント</h1>
+    <p class="subtitle">メモから3案を生成。文章を入れれば推敲も。</p>
+  </header>
+
+  <section class="settings">
+    <details>
+      <summary>API設定</summary>
+      <label>
+        Anthropic APIキー
+        <input type="password" id="apiKey" placeholder="sk-ant-...">
+      </label>
+      <label>
+        モデル
+        <select id="model">
+          <option value="claude-opus-4-7">Claude Opus 4.7（高品質）</option>
+          <option value="claude-sonnet-4-6">Claude Sonnet 4.6（高速）</option>
+        </select>
+      </label>
+      <p class="hint">APIキーはこのブラウザ（localStorage）にのみ保存されます。</p>
+    </details>
+  </section>
+
+  <section class="selectors">
+    <label>
+      学年
+      <select id="grade">
+        <option value="1">1年生</option>
+        <option value="2">2年生</option>
+        <option value="3">3年生</option>
+        <option value="4">4年生</option>
+        <option value="5" selected>5年生</option>
+        <option value="6">6年生</option>
+      </select>
+    </label>
+    <label>
+      時期
+      <select id="term">
+        <option value="前期">前期</option>
+        <option value="後期" selected>後期</option>
+      </select>
+    </label>
+  </section>
+
+  <section class="input-area">
+    <label class="block-label">
+      子供の様子をメモまたは文章で
+      <span class="hint-inline">単語なら生成，文章なら推敲（自動で判別します）</span>
+    </label>
+    <textarea id="userInput" rows="8" placeholder="例：算数 割合, 運動会 応援団, 優しい&#10;または：算数の割合の学習では，図を使って考えることができました。"></textarea>
+    <div class="actions">
+      <button id="clearBtn" class="secondary">クリア</button>
+      <button id="generateBtn" class="primary">所見を作成する</button>
+    </div>
+  </section>
+
+  <section class="output-area" id="outputArea" hidden>
+    <div class="output-header">
+      <h2>結果</h2>
+      <span id="modeIndicator" class="mode-badge"></span>
+    </div>
+    <div id="output"></div>
+  </section>
+
+  <section id="errorBox" class="error" hidden></section>
+</div>
+
+<script src="prompts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
