@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>通知表所見文例アプリ</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <div class="app">
@@ -15,24 +15,39 @@
 
   <section class="settings">
     <details>
-      <summary>API設定</summary>
+      <summary>API設定（はじめての方はこちらを開いてください）</summary>
+
+      <div class="setup-guide">
+        <h3>セットアップ手順</h3>
+        <ol>
+          <li>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio のAPIキーページ</a>
+            を開く（普段お使いのGoogleアカウントでログイン）
+          </li>
+          <li>「APIキーを作成」ボタンをクリックし，表示されたキーをコピー</li>
+          <li>下の入力欄にキーを貼り付ければ完了</li>
+        </ol>
+
+        <h3>注意点</h3>
+        <ul>
+          <li><strong>無料枠あり</strong>：Gemini 2.5 Flashなら1日数百回まで無料で使えます。</li>
+          <li><strong>キーは他人に教えない</strong>：APIキーはパスワードと同じ。SNSや画面共有での流出に注意。</li>
+          <li><strong>保存場所</strong>：このブラウザの中（localStorage）にだけ保存されます。サーバーには送信しません。</li>
+          <li><strong>個人情報の入力は最小限に</strong>：児童の本名や個人を特定できる情報は入力しない運用が安全です（メモは「優しい」「漫画係で活躍」など特性ベースで）。</li>
+        </ul>
+      </div>
+
       <label>
-        AIプロバイダ
-        <select id="provider">
-          <option value="anthropic">Anthropic（Claude）</option>
-          <option value="google">Google（Gemini・無料枠あり）</option>
-        </select>
-      </label>
-      <label id="apiKeyLabel">
-        <span id="apiKeyLabelText">Anthropic APIキー</span>
-        <input type="password" id="apiKey" placeholder="sk-ant-...">
-        <span id="apiKeyHelp" class="hint"></span>
+        Gemini APIキー
+        <input type="password" id="apiKey" placeholder="AIza...">
       </label>
       <label>
         モデル
-        <select id="model"></select>
+        <select id="model">
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash（高速・無料枠が大きい／推奨）</option>
+          <option value="gemini-2.5-pro">Gemini 2.5 Pro（高品質・処理に時間がかかる）</option>
+        </select>
       </label>
-      <p class="hint">APIキーはこのブラウザ（localStorage）にのみ保存されます。</p>
     </details>
   </section>
 
@@ -80,7 +95,7 @@
   <section id="errorBox" class="error" hidden></section>
 </div>
 
-<script src="prompts.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="prompts.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

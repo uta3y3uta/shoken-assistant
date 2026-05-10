@@ -1,8 +1,5 @@
 // DOM要素
-const providerSelect = document.getElementById("provider");
 const apiKeyInput = document.getElementById("apiKey");
-const apiKeyLabelText = document.getElementById("apiKeyLabelText");
-const apiKeyHelp = document.getElementById("apiKeyHelp");
 const modelSelect = document.getElementById("model");
 const gradeSelect = document.getElementById("grade");
 const termSelect = document.getElementById("term");
@@ -14,107 +11,39 @@ const output = document.getElementById("output");
 const modeIndicator = document.getElementById("modeIndicator");
 const errorBox = document.getElementById("errorBox");
 
-// プロバイダ別設定
-const PROVIDERS = {
-  anthropic: {
-    label: "Anthropic（Claude）",
-    keyLabel: "Anthropic APIキー",
-    keyPlaceholder: "sk-ant-...",
-    keyHelp: "console.anthropic.com で取得（有料）",
-    models: [
-      { id: "claude-opus-4-7", label: "Claude Opus 4.7（最高品質）" },
-      { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6（高速・安価）" }
-    ],
-    defaultModel: "claude-opus-4-7"
-  },
-  google: {
-    label: "Google（Gemini）",
-    keyLabel: "Google AI Studio APIキー",
-    keyPlaceholder: "AIza...",
-    keyHelp: "aistudio.google.com/app/apikey で取得（無料枠あり）",
-    models: [
-      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro（高品質）" },
-      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash（高速・無料枠大）" }
-    ],
-    defaultModel: "gemini-2.5-flash"
-  }
-};
-
 // localStorage キー
 const LS = {
-  provider: "shoken_provider",
-  apiKeyAnthropic: "shoken_api_key_anthropic",
-  apiKeyGoogle: "shoken_api_key_google",
-  modelAnthropic: "shoken_model_anthropic",
-  modelGoogle: "shoken_model_google",
+  apiKey: "shoken_api_key_google",
+  model: "shoken_model_google",
   grade: "shoken_grade",
   term: "shoken_term"
 };
 
-function getApiKeyLSKey(provider) {
-  return provider === "google" ? LS.apiKeyGoogle : LS.apiKeyAnthropic;
-}
-function getModelLSKey(provider) {
-  return provider === "google" ? LS.modelGoogle : LS.modelAnthropic;
-}
-
-// プロバイダ切替時にUI更新
-function refreshProviderUI() {
-  const provider = providerSelect.value;
-  const cfg = PROVIDERS[provider];
-
-  apiKeyLabelText.textContent = cfg.keyLabel;
-  apiKeyInput.placeholder = cfg.keyPlaceholder;
-  apiKeyHelp.textContent = cfg.keyHelp;
-  apiKeyInput.value = localStorage.getItem(getApiKeyLSKey(provider)) || "";
-
-  // モデルセレクトを更新
-  modelSelect.innerHTML = "";
-  for (const m of cfg.models) {
-    const opt = document.createElement("option");
-    opt.value = m.id;
-    opt.textContent = m.label;
-    modelSelect.appendChild(opt);
-  }
-  modelSelect.value = localStorage.getItem(getModelLSKey(provider)) || cfg.defaultModel;
-}
-
 // 旧バージョンからのデータ移行
 function migrateLegacy() {
-  const oldKey = localStorage.getItem("shoken_api_key");
-  if (oldKey) {
-    if (oldKey.startsWith("AIza")) {
-      if (!localStorage.getItem(LS.apiKeyGoogle)) {
-        localStorage.setItem(LS.apiKeyGoogle, oldKey);
-      }
-      if (!localStorage.getItem(LS.provider)) {
-        localStorage.setItem(LS.provider, "google");
-      }
-    } else {
-      if (!localStorage.getItem(LS.apiKeyAnthropic)) {
-        localStorage.setItem(LS.apiKeyAnthropic, oldKey);
-      }
+  const legacyKeys = ["shoken_api_key", "shoken_api_key_anthropic"];
+  for (const k of legacyKeys) {
+    const v = localStorage.getItem(k);
+    if (v && v.startsWith("AIza") && !localStorage.getItem(LS.apiKey)) {
+      localStorage.setItem(LS.apiKey, v);
     }
-    localStorage.removeItem("shoken_api_key");
+    if (v) localStorage.removeItem(k);
   }
   const oldModel = localStorage.getItem("shoken_model");
-  if (oldModel) {
-    if (oldModel.startsWith("gemini")) {
-      if (!localStorage.getItem(LS.modelGoogle)) localStorage.setItem(LS.modelGoogle, oldModel);
-    } else {
-      if (!localStorage.getItem(LS.modelAnthropic)) localStorage.setItem(LS.modelAnthropic, oldModel);
-    }
-    localStorage.removeItem("shoken_model");
+  if (oldModel && oldModel.startsWith("gemini") && !localStorage.getItem(LS.model)) {
+    localStorage.setItem(LS.model, oldModel);
   }
+  if (oldModel) localStorage.removeItem("shoken_model");
+  localStorage.removeItem("shoken_provider");
+  localStorage.removeItem("shoken_model_anthropic");
 }
 
-// 設定の読み込み
 function loadSettings() {
   migrateLegacy();
-  providerSelect.value = localStorage.getItem(LS.provider) || "anthropic";
+  apiKeyInput.value = localStorage.getItem(LS.apiKey) || "";
+  modelSelect.value = localStorage.getItem(LS.model) || "gemini-2.5-flash";
   gradeSelect.value = localStorage.getItem(LS.grade) || "5";
   termSelect.value = localStorage.getItem(LS.term) || "後期";
-  refreshProviderUI();
 }
 
 function saveSetting(key, value) {
@@ -122,20 +51,11 @@ function saveSetting(key, value) {
   else localStorage.removeItem(key);
 }
 
-providerSelect.addEventListener("change", () => {
-  saveSetting(LS.provider, providerSelect.value);
-  refreshProviderUI();
-});
-apiKeyInput.addEventListener("change", () => {
-  saveSetting(getApiKeyLSKey(providerSelect.value), apiKeyInput.value.trim());
-});
-modelSelect.addEventListener("change", () => {
-  saveSetting(getModelLSKey(providerSelect.value), modelSelect.value);
-});
+apiKeyInput.addEventListener("change", () => saveSetting(LS.apiKey, apiKeyInput.value.trim()));
+modelSelect.addEventListener("change", () => saveSetting(LS.model, modelSelect.value));
 gradeSelect.addEventListener("change", () => saveSetting(LS.grade, gradeSelect.value));
 termSelect.addEventListener("change", () => saveSetting(LS.term, termSelect.value));
 
-// エラー表示
 function showError(msg) {
   errorBox.hidden = false;
   errorBox.textContent = msg;
@@ -145,7 +65,6 @@ function clearError() {
   errorBox.textContent = "";
 }
 
-// クリア
 clearBtn.addEventListener("click", () => {
   userInput.value = "";
   outputArea.hidden = true;
@@ -154,24 +73,17 @@ clearBtn.addEventListener("click", () => {
   userInput.focus();
 });
 
-// 生成ボタン
 generateBtn.addEventListener("click", async () => {
   clearError();
-  const provider = providerSelect.value;
   const apiKey = apiKeyInput.value.trim();
   const text = userInput.value.trim();
 
   if (!apiKey) {
-    showError(`${PROVIDERS[provider].keyLabel}を「API設定」から入力してください。`);
+    showError("Gemini APIキーを「API設定」から入力してください。");
     return;
   }
-  // キー形式と選択プロバイダのミスマッチをチェック
-  if (provider === "anthropic" && apiKey.startsWith("AIza")) {
-    showError("Anthropicが選択されていますが，Google AI StudioのAPIキー（AIza...）が入力されています。プロバイダを「Google（Gemini）」に切り替えてください。");
-    return;
-  }
-  if (provider === "google" && apiKey.startsWith("sk-ant-")) {
-    showError("Googleが選択されていますが，AnthropicのAPIキー（sk-ant-...）が入力されています。プロバイダを「Anthropic」に切り替えてください。");
+  if (!apiKey.startsWith("AIza")) {
+    showError("APIキーの形式が正しくないようです。Google AI Studio で発行したキー（AIza... で始まる）を貼り付けてください。");
     return;
   }
   if (!text) {
@@ -191,13 +103,7 @@ generateBtn.addEventListener("click", async () => {
     const term = termSelect.value;
     const model = modelSelect.value;
     const systemPrompt = buildSystemPrompt(grade, term);
-
-    let result;
-    if (provider === "google") {
-      result = await callGemini(apiKey, model, systemPrompt, text);
-    } else {
-      result = await callClaude(apiKey, model, systemPrompt, text);
-    }
+    const result = await callGemini(apiKey, model, systemPrompt, text);
     renderOutput(result);
   } catch (e) {
     output.innerHTML = "";
@@ -207,41 +113,6 @@ generateBtn.addEventListener("click", async () => {
     clearBtn.disabled = false;
   }
 });
-
-// Claude API 呼び出し
-async function callClaude(apiKey, model, systemPrompt, userText) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userText }]
-    })
-  });
-
-  if (!res.ok) {
-    let detail = "";
-    try {
-      const err = await res.json();
-      detail = err?.error?.message || JSON.stringify(err);
-    } catch {
-      detail = await res.text();
-    }
-    throw new Error(`Claude APIエラー (${res.status}): ${detail}`);
-  }
-
-  const data = await res.json();
-  const textBlock = (data.content || []).find(b => b.type === "text");
-  if (!textBlock) throw new Error("応答にテキストが含まれていません。");
-  return textBlock.text;
-}
 
 // Gemini API 呼び出し
 async function callGemini(apiKey, model, systemPrompt, userText) {
@@ -256,7 +127,7 @@ async function callGemini(apiKey, model, systemPrompt, userText) {
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: "user", parts: [{ text: userText }] }],
       generationConfig: {
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
         temperature: 0.7
       }
     })
@@ -275,10 +146,21 @@ async function callGemini(apiKey, model, systemPrompt, userText) {
 
   const data = await res.json();
   const candidate = (data.candidates || [])[0];
-  if (!candidate) throw new Error("応答に候補がありません。");
+  if (!candidate) throw new Error("応答に候補がありません。再度お試しください。");
+
+  // 終了理由の確認
+  if (candidate.finishReason && candidate.finishReason !== "STOP") {
+    if (candidate.finishReason === "MAX_TOKENS") {
+      throw new Error("出力が長すぎて途中で切れました。もう一度お試しください。");
+    }
+    if (candidate.finishReason === "SAFETY") {
+      throw new Error("安全性フィルタで応答が止まりました。入力内容をご確認ください。");
+    }
+  }
+
   const parts = candidate.content?.parts || [];
   const text = parts.map(p => p.text || "").join("");
-  if (!text) throw new Error("応答にテキストが含まれていません。");
+  if (!text) throw new Error("応答にテキストが含まれていません。再度お試しください。");
   return text;
 }
 
@@ -301,16 +183,10 @@ function renderOutput(raw) {
   while ((m = caseRegex.exec(cleaned)) !== null) {
     const num = m[1];
     const title = m[2].trim();
-    const body = m[3].trim();
-
-    const charMatch = body.match(/[（(]約\s*(\d+)\s*文字[）)]/);
-    let mainBody = body;
-    let charNote = "";
-    if (charMatch) {
-      charNote = `約 ${charMatch[1]} 文字`;
-      mainBody = body.replace(charMatch[0], "").trim();
-    }
-    cases.push({ num, title, body: mainBody, charNote });
+    let body = m[3].trim();
+    // モデルが付ける「（約 〇〇文字）」表記は実測表示にするため除去
+    body = body.replace(/[（(]約\s*\d+\s*文字[）)]/g, "").trim();
+    cases.push({ num, title, body });
   }
 
   if (cases.length === 0) {
@@ -325,7 +201,7 @@ function renderOutput(raw) {
         <button class="copy-btn" data-idx="${i}">コピー</button>
       </div>
       <p class="case-body">${escapeHtml(c.body)}</p>
-      ${c.charNote ? `<p class="case-meta">${c.charNote}（実測 ${countChars(c.body)} 文字）</p>` : `<p class="case-meta">実測 ${countChars(c.body)} 文字</p>`}
+      <p class="case-meta">${countChars(c.body)}文字</p>
     </div>
   `).join("");
 

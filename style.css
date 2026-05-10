@@ -116,6 +116,52 @@ textarea:focus {
   margin: 4px 0 0;
 }
 
+.setup-guide {
+  background: #fff8ee;
+  border: 1.5px solid #f5e0c2;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin: 4px 0 18px;
+  font-size: 0.9rem;
+  color: #5a4530;
+  line-height: 1.85;
+}
+
+.setup-guide h3 {
+  font-size: 0.95rem;
+  margin: 0 0 8px;
+  color: #8b5a2b;
+  font-weight: 700;
+}
+
+.setup-guide h3:not(:first-child) {
+  margin-top: 14px;
+}
+
+.setup-guide ol,
+.setup-guide ul {
+  margin: 0;
+  padding-left: 1.4em;
+}
+
+.setup-guide li {
+  margin-bottom: 4px;
+}
+
+.setup-guide a {
+  color: #c7592e;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.setup-guide a:hover {
+  color: #a04219;
+}
+
+.setup-guide strong {
+  color: #8b5a2b;
+}
+
 .hint-inline {
   font-weight: normal;
   font-size: 0.78rem;
