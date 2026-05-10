@@ -1,5 +1,8 @@
 // DOM要素
+const providerSelect = document.getElementById("provider");
 const apiKeyInput = document.getElementById("apiKey");
+const apiKeyLabelText = document.getElementById("apiKeyLabelText");
+const apiKeyHelp = document.getElementById("apiKeyHelp");
 const modelSelect = document.getElementById("model");
 const gradeSelect = document.getElementById("grade");
 const termSelect = document.getElementById("term");
@@ -11,32 +14,94 @@ const output = document.getElementById("output");
 const modeIndicator = document.getElementById("modeIndicator");
 const errorBox = document.getElementById("errorBox");
 
+// プロバイダ別設定
+const PROVIDERS = {
+  anthropic: {
+    label: "Anthropic（Claude）",
+    keyLabel: "Anthropic APIキー",
+    keyPlaceholder: "sk-ant-...",
+    keyHelp: "console.anthropic.com で取得（有料）",
+    models: [
+      { id: "claude-opus-4-7", label: "Claude Opus 4.7（最高品質）" },
+      { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6（高速・安価）" }
+    ],
+    defaultModel: "claude-opus-4-7"
+  },
+  google: {
+    label: "Google（Gemini）",
+    keyLabel: "Google AI Studio APIキー",
+    keyPlaceholder: "AIza...",
+    keyHelp: "aistudio.google.com/app/apikey で取得（無料枠あり）",
+    models: [
+      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro（高品質）" },
+      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash（高速・無料枠大）" }
+    ],
+    defaultModel: "gemini-2.5-flash"
+  }
+};
+
 // localStorage キー
 const LS = {
-  apiKey: "shoken_api_key",
-  model: "shoken_model",
+  provider: "shoken_provider",
+  apiKeyAnthropic: "shoken_api_key_anthropic",
+  apiKeyGoogle: "shoken_api_key_google",
+  modelAnthropic: "shoken_model_anthropic",
+  modelGoogle: "shoken_model_google",
   grade: "shoken_grade",
   term: "shoken_term"
 };
 
-// 設定の読み込み・保存
+function getApiKeyLSKey(provider) {
+  return provider === "google" ? LS.apiKeyGoogle : LS.apiKeyAnthropic;
+}
+function getModelLSKey(provider) {
+  return provider === "google" ? LS.modelGoogle : LS.modelAnthropic;
+}
+
+// プロバイダ切替時にUI更新
+function refreshProviderUI() {
+  const provider = providerSelect.value;
+  const cfg = PROVIDERS[provider];
+
+  apiKeyLabelText.textContent = cfg.keyLabel;
+  apiKeyInput.placeholder = cfg.keyPlaceholder;
+  apiKeyHelp.textContent = cfg.keyHelp;
+  apiKeyInput.value = localStorage.getItem(getApiKeyLSKey(provider)) || "";
+
+  // モデルセレクトを更新
+  modelSelect.innerHTML = "";
+  for (const m of cfg.models) {
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = m.label;
+    modelSelect.appendChild(opt);
+  }
+  modelSelect.value = localStorage.getItem(getModelLSKey(provider)) || cfg.defaultModel;
+}
+
+// 設定の読み込み
 function loadSettings() {
-  apiKeyInput.value = localStorage.getItem(LS.apiKey) || "";
-  modelSelect.value = localStorage.getItem(LS.model) || "claude-opus-4-7";
+  providerSelect.value = localStorage.getItem(LS.provider) || "anthropic";
   gradeSelect.value = localStorage.getItem(LS.grade) || "5";
   termSelect.value = localStorage.getItem(LS.term) || "後期";
+  refreshProviderUI();
 }
 
 function saveSetting(key, value) {
-  if (value) {
-    localStorage.setItem(key, value);
-  } else {
-    localStorage.removeItem(key);
-  }
+  if (value) localStorage.setItem(key, value);
+  else localStorage.removeItem(key);
 }
 
-apiKeyInput.addEventListener("change", () => saveSetting(LS.apiKey, apiKeyInput.value.trim()));
-modelSelect.addEventListener("change", () => saveSetting(LS.model, modelSelect.value));
+providerSelect.addEventListener("change", () => {
+  saveSetting(LS.provider, providerSelect.value);
+  refreshProviderUI();
+});
+apiKeyInput.addEventListener("change", () => {
+  saveSetting(getApiKeyLSKey(providerSelect.value), apiKeyInput.value.trim());
+});
+modelSelect.addEventListener("change", () => {
+  saveSetting(getModelLSKey(providerSelect.value), modelSelect.value);
+});
 gradeSelect.addEventListener("change", () => saveSetting(LS.grade, gradeSelect.value));
 termSelect.addEventListener("change", () => saveSetting(LS.term, termSelect.value));
 
@@ -62,11 +127,12 @@ clearBtn.addEventListener("click", () => {
 // 生成ボタン
 generateBtn.addEventListener("click", async () => {
   clearError();
+  const provider = providerSelect.value;
   const apiKey = apiKeyInput.value.trim();
   const text = userInput.value.trim();
 
   if (!apiKey) {
-    showError("APIキーを「API設定」から入力してください。");
+    showError(`${PROVIDERS[provider].keyLabel}を「API設定」から入力してください。`);
     return;
   }
   if (!text) {
@@ -86,7 +152,13 @@ generateBtn.addEventListener("click", async () => {
     const term = termSelect.value;
     const model = modelSelect.value;
     const systemPrompt = buildSystemPrompt(grade, term);
-    const result = await callClaude(apiKey, model, systemPrompt, text);
+
+    let result;
+    if (provider === "google") {
+      result = await callGemini(apiKey, model, systemPrompt, text);
+    } else {
+      result = await callClaude(apiKey, model, systemPrompt, text);
+    }
     renderOutput(result);
   } catch (e) {
     output.innerHTML = "";
@@ -123,7 +195,7 @@ async function callClaude(apiKey, model, systemPrompt, userText) {
     } catch {
       detail = await res.text();
     }
-    throw new Error(`API エラー (${res.status}): ${detail}`);
+    throw new Error(`Claude APIエラー (${res.status}): ${detail}`);
   }
 
   const data = await res.json();
@@ -132,11 +204,49 @@ async function callClaude(apiKey, model, systemPrompt, userText) {
   return textBlock.text;
 }
 
+// Gemini API 呼び出し
+async function callGemini(apiKey, model, systemPrompt, userText) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-goog-api-key": apiKey
+    },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: "user", parts: [{ text: userText }] }],
+      generationConfig: {
+        maxOutputTokens: 2048,
+        temperature: 0.7
+      }
+    })
+  });
+
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const err = await res.json();
+      detail = err?.error?.message || JSON.stringify(err);
+    } catch {
+      detail = await res.text();
+    }
+    throw new Error(`Gemini APIエラー (${res.status}): ${detail}`);
+  }
+
+  const data = await res.json();
+  const candidate = (data.candidates || [])[0];
+  if (!candidate) throw new Error("応答に候補がありません。");
+  const parts = candidate.content?.parts || [];
+  const text = parts.map(p => p.text || "").join("");
+  if (!text) throw new Error("応答にテキストが含まれていません。");
+  return text;
+}
+
 // 出力のパース・描画
 function renderOutput(raw) {
   const cleaned = raw.replace(/\*\*/g, "").trim();
 
-  // 処理モード抽出
   const modeMatch = cleaned.match(/【処理モード】[：:]\s*([^\n]+)/);
   if (modeMatch) {
     const modeText = modeMatch[1].trim();
@@ -146,7 +256,6 @@ function renderOutput(raw) {
     }
   }
 
-  // 案を抽出（【案1〜】〜次の【案 もしくは末尾まで）
   const caseRegex = /【案(\d)[：:]([^】]+)】\s*([\s\S]*?)(?=\n*【案\d|\s*$)/g;
   const cases = [];
   let m;
@@ -155,7 +264,6 @@ function renderOutput(raw) {
     const title = m[2].trim();
     const body = m[3].trim();
 
-    // 文字数表記抽出
     const charMatch = body.match(/[（(]約\s*(\d+)\s*文字[）)]/);
     let mainBody = body;
     let charNote = "";
@@ -167,7 +275,6 @@ function renderOutput(raw) {
   }
 
   if (cases.length === 0) {
-    // パース失敗 → そのまま表示
     output.innerHTML = `<pre class="case-body">${escapeHtml(cleaned)}</pre>`;
     return;
   }
@@ -183,7 +290,6 @@ function renderOutput(raw) {
     </div>
   `).join("");
 
-  // コピー機能
   output.querySelectorAll(".copy-btn").forEach(btn => {
     btn.addEventListener("click", async () => {
       const idx = parseInt(btn.dataset.idx, 10);
@@ -211,13 +317,10 @@ function escapeHtml(s) {
     .replace(/'/g, "&#39;");
 }
 
-// 文字数カウント（句読点・カッコも1文字）
 function countChars(s) {
-  // 改行は除外
   return Array.from(s.replace(/\s/g, "")).length;
 }
 
-// Ctrl/Cmd+Enter で送信
 userInput.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
     e.preventDefault();
@@ -225,5 +328,4 @@ userInput.addEventListener("keydown", (e) => {
   }
 });
 
-// 初期化
 loadSettings();
